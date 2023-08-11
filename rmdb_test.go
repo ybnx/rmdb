@@ -2,15 +2,11 @@ package rmdb
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
 )
-
-func TestTwo(t *testing.T) {
-	t.Run("hello", TestCompile)
-	t.Run("demo", TestCreateDB)
-}
 
 func TestCreateDB(t *testing.T) {
 	db, err := CreateDatabase("demo")
@@ -95,37 +91,9 @@ func TestDropDB(t *testing.T) {
 	fmt.Println(ShowDatabase())
 }
 
-func TestCompile(t *testing.T) {
+func TestInsert(t *testing.T) {
 
-	//GlobalOption.IOMode = MMapMode
-	GlobalOption.CondiFuncs["range"] = func(col []any) bool {
-		return col[0].(string) > "como" && col[0].(string) < "zuzu"
-	}
-	GlobalOption.CondiFuncs["great_float"] = func(col []any) bool {
-		return col[0].(float64) > 10
-	}
-	GlobalOption.CondiFuncs["gtfloat"] = func(col []any) bool {
-		return col[0].(float64) > 7
-	}
-	GlobalOption.CondiFuncs["great"] = func(col []any) bool {
-		return col[0].(int64) > 8
-	}
-	GlobalOption.CondiFuncs["kaguoka"] = func(col []any) bool {
-		return col[0].(string) == "kaguoka"
-	}
-	GlobalOption.AggFuncs["sum"] = func(vals []any) any {
-		sum := float64(0)
-		for _, val := range vals {
-			sum += val.(float64)
-		}
-		return sum
-	}
-	GlobalOption.ColFuncs["addstr"] = func(val any) any {
-		return val.(string) + " is my name"
-	}
-	GlobalOption.ExecFuncs["product"] = func(cols []any) any {
-		return cols[0].(int64) * cols[1].(int64)
-	}
+	GlobalOption.IOMode = MMapMode
 
 	db, err := CreateDatabase("hello")
 	if err != nil {
@@ -162,16 +130,74 @@ insert into test (name, age,id,price) values ("como",3,4,3.14);
 		insert into test (name, age,id,price )   values ("niuniu"  ,2,5,7.77);
 	insert into   test (  name,age,id,price) values ("zuzu" ,6 ,4 ,9.99);
 	`
-	db.Update(sql)
+	err = db.Update(sql)
+	assert.Nil(t, err)
 
-	res, _ := db.Query("  select *  from test  where range(name  )") // TODO多个条件分and or
+	res, err := db.Query("  select *  from test;") // TODO多个条件分and or
+	assert.Nil(t, err)
 
 	fmt.Println(res.ToString())
 
 	err = db.Close()
-	if err != nil {
-		t.Fatal(err)
+	assert.Nil(t, err)
+
+}
+
+func TestQuery(t *testing.T) {
+
+	GlobalOption.CondiFuncs["range"] = func(col []any) bool {
+		return col[0].(string) > "como" && col[0].(string) < "zuzu"
 	}
+	GlobalOption.CondiFuncs["great_float"] = func(col []any) bool {
+		return col[0].(float64) > 10
+	}
+	GlobalOption.CondiFuncs["gtfloat"] = func(col []any) bool {
+		return col[0].(float64) > 7
+	}
+	GlobalOption.CondiFuncs["great"] = func(col []any) bool {
+		return col[0].(int64) > 8
+	}
+	GlobalOption.CondiFuncs["kaguoka"] = func(col []any) bool {
+		return col[0].(string) == "kaguoka"
+	}
+	GlobalOption.AggFuncs["sum"] = func(vals []any) any {
+		sum := float64(0)
+		for _, val := range vals {
+			sum += val.(float64)
+		}
+		return sum
+	}
+	GlobalOption.ColFuncs["addstr"] = func(val any) any {
+		return val.(string) + " is my name"
+	}
+	GlobalOption.ExecFuncs["product"] = func(cols []any) any {
+		return cols[0].(int64) * cols[1].(int64)
+	}
+
+	db, err := UseDatabase("hello")
+	assert.Nil(t, err)
+
+	res, err := db.Query("  select *  from test  where range(name  )")
+	// 其它测试用例
+	//res, err := db.Query("  select name, age ,   sum(price)  as sum_price from test   group by  age")
+	//res, err := db.Query("  select name, age ,   price  from test   order by  name  asc ")
+	//res, err := db.Query("  select name, age ,   sum(price)  as sum_price from test  group by  age having great_float(sum_price)  order by  name  desc ")
+	//res, err := db.Query("  select name, age ,   sum(price)  as sum_price from test  where range(name  ) group by  age  order by  age  asc ")
+	//res, err := db.Query("select name, age, price from test  limit  2,4 ")
+	//res, err := db.Query("select name, age, price from test order by price asc  limit  2,4 ")
+	//res, err := db.Query("select name, age ,   sum(price)  as sum_price from test  group by  age having  great(sum_price)")
+	//res, err := db.Query("select name, age ,   sum(price)  as sum_price from test  group by  age")
+	//res, err := db.Query("select  id ,name, age, price from test")
+	//res, err := db.Query(" select *  from test ;")
+	//res, err := db.Query("select distinct name, age, id , price from test")
+	//res, err := db.Query("select addstr( name) as new_name, product(age, id) as res from test having  great(res)") //having只能和group by连用
+	//res, err := db.Query("select addstr( name) as new_name, product(age, id) as res from test where  great(res)")
+
+	assert.Nil(t, err)
+	fmt.Println(res.ToString())
+
+	err = db.Close()
+	assert.Nil(t, err)
 
 }
 
@@ -324,7 +350,7 @@ func TestUsedb(t *testing.T) {
 }
 
 func TestSub(t *testing.T) {
-	t.Run("create", TestCompile)
+	t.Run("create", TestInsert)
 	t.Run("use", TestUsedb)
 }
 
@@ -418,36 +444,5 @@ func TestEnDecode(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println(val5)
-
-}
-
-func TestInsert(t *testing.T) {
-	db, err := CreateDatabase("hello")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	table, err := db.CreateTable("test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = table.SetColumn("name", STRING)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = table.SetColumn("age", INT64)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = table.SetColumn("price", FLOAT64)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	db.Update(`insert into test (name, age) values ("root", 1)`)
-	res, _ := db.Query(`select * from test`)
-	fmt.Println(res.ToString())
-
-	db.Close()
 
 }

@@ -12,7 +12,7 @@ import (
 
 func ConvertQuery(sql string) []string {
 
-	tokens := []string{"select", "distinct", "from", "where", "group", "by", "having", "order", "by", "limit"}
+	tokens := []string{"select", "distinct", "from", "where", "group by", "having", "order by", "limit"} //group by和order by中间只能有一个空格
 
 	pattern := "(?i)\\b(" + strings.Join(tokens, "|") + ")\\b"
 	reg := regexp.MustCompile(pattern)
